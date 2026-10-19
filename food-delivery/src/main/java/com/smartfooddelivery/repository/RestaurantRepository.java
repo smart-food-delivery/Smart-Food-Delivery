@@ -12,4 +12,14 @@ public class RestaurantRepository {
     public List<Restaurant> findAll() {
         return restaurants;
     }
+
+    public Restaurant findById(int id) {
+        for (Restaurant restaurant : restaurants) {
+            if (restaurant.getId() == id) {
+                return restaurant;
+            }
+        }
+        return null;
+    }
+
 }
