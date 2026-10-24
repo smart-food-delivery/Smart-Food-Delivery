@@ -144,4 +144,40 @@ public class OrderTest {
                         "   "
                 ));
     }
+    @Test
+    void cancelsPendingOrder() {
+        User customer = new User(1, "customer1", "hash", "Customer");
+        Restaurant restaurant =
+                new Restaurant(1, "Pizza House", "Nablus", true);
+        MenuItem pizza = new MenuItem(1, "Pizza", 25.0, 1);
+
+        Order order = new Order(
+                1, customer, restaurant,
+                List.of(new OrderItem(pizza, 1)),
+                "Nablus, Rafidia, Building 10"
+        );
+
+        order.cancel();
+
+        assertEquals(OrderStatus.CANCELLED, order.getStatus());
+    }
+
+    @Test
+    void rejectsCancellingOrderTwice() {
+        User customer = new User(1, "customer1", "hash", "Customer");
+        Restaurant restaurant =
+                new Restaurant(1, "Pizza House", "Nablus", true);
+        MenuItem pizza = new MenuItem(1, "Pizza", 25.0, 1);
+
+        Order order = new Order(
+                1, customer, restaurant,
+                List.of(new OrderItem(pizza, 1)),
+                "Nablus, Rafidia, Building 10"
+        );
+
+        order.cancel();
+
+        assertThrows(IllegalStateException.class, () -> order.cancel());
+        assertEquals(OrderStatus.CANCELLED, order.getStatus());
+    }
 }

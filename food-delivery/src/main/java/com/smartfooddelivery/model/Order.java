@@ -73,4 +73,13 @@ public class Order {
                 .mapToDouble(OrderItem::getSubtotal)
                 .sum();
     }
+    public void cancel() {
+        if (!status.canBeCancelled()) {
+            throw new IllegalStateException(
+                    "Order cannot be cancelled in status: " + status
+            );
+        }
+
+        status = OrderStatus.CANCELLED;
+    }
 }
