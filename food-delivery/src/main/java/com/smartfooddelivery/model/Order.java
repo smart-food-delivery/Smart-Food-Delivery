@@ -82,4 +82,27 @@ public class Order {
 
         status = OrderStatus.CANCELLED;
     }
+    public void changeStatus(OrderStatus newStatus) {
+        if (newStatus == null) {
+            throw new IllegalArgumentException("New status is required");
+        }
+
+        boolean allowed = switch (status) {
+            case PENDING -> newStatus == OrderStatus.CONFIRMED;
+            case CONFIRMED -> newStatus == OrderStatus.PREPARING;
+            case PREPARING -> newStatus == OrderStatus.READY;
+            case READY -> newStatus == OrderStatus.OUT_FOR_DELIVERY;
+            case OUT_FOR_DELIVERY -> newStatus == OrderStatus.DELIVERED;
+            case DELIVERED, CANCELLED -> false;
+        };
+
+        if (!allowed) {
+            throw new IllegalStateException(
+                    "Invalid status transition: "
+                            + status + " -> " + newStatus
+            );
+        }
+
+        status = newStatus;
+    }
 }
