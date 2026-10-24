@@ -1,0 +1,2 @@
+1,customer1,yyI4zg+dNfejv4j/m0ymbg==:CLsYCxua/VTmJ01Yx/TON+2NKUgUzal2alOaHqGl7zw=,Customer
+2,manager1,8lb7b/hyg45lbMP7AzXkNw==:ZR+NAC/wbYXxfotSda85dlzSWRqDBQF3R2cAPUqvsAs=,Manager
