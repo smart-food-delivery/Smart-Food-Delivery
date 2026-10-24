@@ -205,4 +205,49 @@ public class OrderServiceTest {
 
         verifyNoInteractions(orderRepository);
     }
+    private Order createPendingOrder() {
+        Restaurant restaurant =
+                new Restaurant(1, "Pizza House", "Nablus", true);
+
+        return new Order(
+                10, customer, restaurant, validItems(),
+                "Nablus, Rafidia, Building 10"
+        );
+    }
+
+    @Test
+    void cancelsExistingPendingOrder() {
+        Order order = createPendingOrder();
+
+        when(orderRepository.findById(10)).thenReturn(order);
+
+        orderService.cancelOrder(10);
+
+        assertEquals(OrderStatus.CANCELLED, order.getStatus());
+        verify(orderRepository).findById(10);
+    }
+
+    @Test
+    void rejectsCancellationOfUnknownOrder() {
+        when(orderRepository.findById(99)).thenReturn(null);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> orderService.cancelOrder(99));
+
+        verify(orderRepository).findById(99);
+    }
+
+    @Test
+    void rejectsCancellationOfAlreadyCancelledOrder() {
+        Order order = createPendingOrder();
+        order.cancel();
+
+        when(orderRepository.findById(10)).thenReturn(order);
+
+        assertThrows(IllegalStateException.class,
+                () -> orderService.cancelOrder(10));
+
+        assertEquals(OrderStatus.CANCELLED, order.getStatus());
+    }
 }
+    

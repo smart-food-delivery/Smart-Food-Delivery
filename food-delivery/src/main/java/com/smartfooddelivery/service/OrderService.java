@@ -15,7 +15,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final RestaurantRepository restaurantRepository;
     private final DeliveryPolicy deliveryPolicy;
-    
+
     public OrderService(OrderRepository orderRepository,
                         RestaurantRepository restaurantRepository,
                         DeliveryPolicy deliveryPolicy) {
@@ -55,6 +55,7 @@ public class OrderService {
                         "Order contains an unavailable item"
                 );
             }
+
             if (item.getMenuItem().getRestaurantId() != restaurantId) {
                 throw new IllegalArgumentException(
                         "All items must belong to the selected restaurant"
@@ -65,5 +66,15 @@ public class OrderService {
         deliveryPolicy.validate(order);
         orderRepository.save(order);
         return order;
+    }
+
+    public void cancelOrder(int orderId) {
+        Order order = orderRepository.findById(orderId);
+
+        if (order == null) {
+            throw new IllegalArgumentException("Order not found");
+        }
+
+        order.cancel();
     }
 }
