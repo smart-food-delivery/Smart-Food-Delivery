@@ -14,12 +14,16 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final RestaurantRepository restaurantRepository;
-
+    private final DeliveryPolicy deliveryPolicy;
+    
     public OrderService(OrderRepository orderRepository,
-                        RestaurantRepository restaurantRepository) {
+                        RestaurantRepository restaurantRepository,
+                        DeliveryPolicy deliveryPolicy) {
+
         this.orderRepository = Objects.requireNonNull(orderRepository);
         this.restaurantRepository =
                 Objects.requireNonNull(restaurantRepository);
+        this.deliveryPolicy = Objects.requireNonNull(deliveryPolicy);
     }
 
     public Order placeOrder(int orderId, User customer,
@@ -58,6 +62,7 @@ public class OrderService {
             }
         }
 
+        deliveryPolicy.validate(order);
         orderRepository.save(order);
         return order;
     }

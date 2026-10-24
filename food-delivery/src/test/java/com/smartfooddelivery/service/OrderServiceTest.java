@@ -29,7 +29,9 @@ public class OrderServiceTest {
         restaurantRepository = mock(RestaurantRepository.class);
 
         orderService = new OrderService(
-                orderRepository, restaurantRepository
+                orderRepository,
+                restaurantRepository,
+                new DeliveryPolicy(30.0)
         );
 
         customer = new User(1, "customer1", "hash", "Customer");
@@ -149,6 +151,21 @@ public class OrderServiceTest {
                 new OrderItem(availablePizza, 1),
                 new OrderItem(unavailableBurger, 1)
         );
+
+        assertThrows(IllegalArgumentException.class,
+                () -> orderService.placeOrder(
+                        10, customer, 1, items,
+                        "Nablus, Rafidia, Building 10"
+                ));
+
+        verifyNoInteractions(orderRepository);
+    }
+    @Test
+    void rejectsOrderBelowMinimumWithoutSaving() {
+        makeRestaurantAvailable();
+
+        MenuItem pizza = new MenuItem(1, "Pizza", 25.0, 1);
+        List<OrderItem> items = List.of(new OrderItem(pizza, 1));
 
         assertThrows(IllegalArgumentException.class,
                 () -> orderService.placeOrder(
