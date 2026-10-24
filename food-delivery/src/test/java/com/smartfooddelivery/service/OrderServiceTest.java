@@ -11,6 +11,7 @@ import com.smartfooddelivery.repository.RestaurantRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.Set;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -31,7 +32,7 @@ public class OrderServiceTest {
         orderService = new OrderService(
                 orderRepository,
                 restaurantRepository,
-                new DeliveryPolicy(30.0)
+                new DeliveryPolicy(30.0, Set.of("Nablus"))
         );
 
         customer = new User(1, "customer1", "hash", "Customer");
@@ -170,6 +171,23 @@ public class OrderServiceTest {
         assertThrows(IllegalArgumentException.class,
                 () -> orderService.placeOrder(
                         10, customer, 1, items,
+                        "Nablus, Rafidia, Building 10"
+                ));
+
+        verifyNoInteractions(orderRepository);
+        
+    }
+    @Test
+    void rejectsRestaurantOutsideDeliveryZoneWithoutSaving() {
+        Restaurant restaurant =
+                new Restaurant(1, "Pizza House", "Ramallah", true);
+
+        when(restaurantRepository.findById(1))
+                .thenReturn(restaurant);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> orderService.placeOrder(
+                        10, customer, 1, validItems(),
                         "Nablus, Rafidia, Building 10"
                 ));
 

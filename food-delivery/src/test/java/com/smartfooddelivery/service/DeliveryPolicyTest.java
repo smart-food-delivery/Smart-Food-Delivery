@@ -7,6 +7,7 @@ import com.smartfooddelivery.model.Restaurant;
 import com.smartfooddelivery.model.User;
 import org.junit.jupiter.api.Test;
 
+import java.util.Set;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -15,8 +16,10 @@ public class DeliveryPolicyTest {
 
     private Order createOrder(double price) {
         User customer = new User(1, "customer1", "hash", "Customer");
+
         Restaurant restaurant =
                 new Restaurant(1, "Pizza House", "Nablus", true);
+
         MenuItem item = new MenuItem(1, "Meal", price, 1);
 
         return new Order(
@@ -28,7 +31,9 @@ public class DeliveryPolicyTest {
 
     @Test
     void rejectsOrderBelowMinimum() {
-        DeliveryPolicy policy = new DeliveryPolicy(30.0);
+        DeliveryPolicy policy =
+                new DeliveryPolicy(30.0, Set.of("Nablus"));
+
         Order order = createOrder(29.99);
 
         assertThrows(IllegalArgumentException.class,
@@ -37,7 +42,9 @@ public class DeliveryPolicyTest {
 
     @Test
     void acceptsOrderExactlyAtMinimum() {
-        DeliveryPolicy policy = new DeliveryPolicy(30.0);
+        DeliveryPolicy policy =
+                new DeliveryPolicy(30.0, Set.of("Nablus"));
+
         Order order = createOrder(30.0);
 
         assertDoesNotThrow(() -> policy.validate(order));
@@ -45,7 +52,9 @@ public class DeliveryPolicyTest {
 
     @Test
     void acceptsOrderAboveMinimum() {
-        DeliveryPolicy policy = new DeliveryPolicy(30.0);
+        DeliveryPolicy policy =
+                new DeliveryPolicy(30.0, Set.of("Nablus"));
+
         Order order = createOrder(30.01);
 
         assertDoesNotThrow(() -> policy.validate(order));
@@ -54,24 +63,33 @@ public class DeliveryPolicyTest {
     @Test
     void rejectsNegativeMinimum() {
         assertThrows(IllegalArgumentException.class,
-                () -> new DeliveryPolicy(-1.0));
+                () -> new DeliveryPolicy(
+                        -1.0, Set.of("Nablus")
+                ));
     }
 
     @Test
     void rejectsNonFiniteMinimum() {
         assertThrows(IllegalArgumentException.class,
-                () -> new DeliveryPolicy(Double.NaN));
+                () -> new DeliveryPolicy(
+                        Double.NaN, Set.of("Nablus")
+                ));
 
         assertThrows(IllegalArgumentException.class,
-                () -> new DeliveryPolicy(Double.POSITIVE_INFINITY));
+                () -> new DeliveryPolicy(
+                        Double.POSITIVE_INFINITY, Set.of("Nablus")
+                ));
 
         assertThrows(IllegalArgumentException.class,
-                () -> new DeliveryPolicy(Double.NEGATIVE_INFINITY));
+                () -> new DeliveryPolicy(
+                        Double.NEGATIVE_INFINITY, Set.of("Nablus")
+                ));
     }
 
     @Test
     void rejectsMissingOrder() {
-        DeliveryPolicy policy = new DeliveryPolicy(30.0);
+        DeliveryPolicy policy =
+                new DeliveryPolicy(30.0, Set.of("Nablus"));
 
         assertThrows(IllegalArgumentException.class,
                 () -> policy.validate(null));
@@ -79,7 +97,8 @@ public class DeliveryPolicyTest {
 
     @Test
     void rejectsNonFiniteSubtotal() {
-        DeliveryPolicy policy = new DeliveryPolicy(30.0);
+        DeliveryPolicy policy =
+                new DeliveryPolicy(30.0, Set.of("Nablus"));
 
         assertThrows(IllegalArgumentException.class,
                 () -> policy.validate(createOrder(Double.NaN)));
@@ -89,4 +108,25 @@ public class DeliveryPolicyTest {
                         createOrder(Double.POSITIVE_INFINITY)
                 ));
     }
+    @Test
+void rejectsRestaurantOutsideDeliveryZone() {
+    DeliveryPolicy policy =
+            new DeliveryPolicy(30.0, Set.of("Ramallah"));
+
+    // المطعم الموجود في createOrder بمدينة نابلس
+    Order order = createOrder(50.0);
+
+    assertThrows(IllegalArgumentException.class,
+            () -> policy.validate(order));
+}
+
+@Test
+void acceptsCityWithDifferentCaseAndExtraSpaces() {
+    DeliveryPolicy policy =
+            new DeliveryPolicy(30.0, Set.of("  nAbLuS  "));
+
+    Order order = createOrder(50.0);
+
+    assertDoesNotThrow(() -> policy.validate(order));
+}
 }
