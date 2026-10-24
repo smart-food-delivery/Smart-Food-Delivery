@@ -136,4 +136,26 @@ public class OrderServiceTest {
 
         verifyNoInteractions(orderRepository);
     }
+    @Test
+    void rejectsUnavailableItemWithoutSaving() {
+        makeRestaurantAvailable();
+
+        MenuItem availablePizza =
+                new MenuItem(1, "Pizza", 25.0, 1, true);
+        MenuItem unavailableBurger =
+                new MenuItem(2, "Burger", 20.0, 1, false);
+
+        List<OrderItem> items = List.of(
+                new OrderItem(availablePizza, 1),
+                new OrderItem(unavailableBurger, 1)
+        );
+
+        assertThrows(IllegalArgumentException.class,
+                () -> orderService.placeOrder(
+                        10, customer, 1, items,
+                        "Nablus, Rafidia, Building 10"
+                ));
+
+        verifyNoInteractions(orderRepository);
+    }
 }

@@ -46,6 +46,11 @@ public class OrderService {
         );
 
         for (OrderItem item : order.getItems()) {
+            if (!item.getMenuItem().isAvailable()) {
+                throw new IllegalArgumentException(
+                        "Order contains an unavailable item"
+                );
+            }
             if (item.getMenuItem().getRestaurantId() != restaurantId) {
                 throw new IllegalArgumentException(
                         "All items must belong to the selected restaurant"
