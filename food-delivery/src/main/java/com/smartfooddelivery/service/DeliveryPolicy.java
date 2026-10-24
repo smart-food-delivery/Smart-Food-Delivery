@@ -48,6 +48,7 @@ public class DeliveryPolicy {
             throw new IllegalArgumentException("Order is required");
         }
 
+        validateAddress(order.getDeliveryAddress());
         String restaurantCity = order.getRestaurant().getAddress();
 
         if (restaurantCity == null
@@ -69,5 +70,28 @@ public class DeliveryPolicy {
 
     private String normalize(String city) {
         return city.trim().toLowerCase(Locale.ROOT);
+    }
+    private void validateAddress(String address) {
+        if (address == null || address.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Delivery address is required"
+            );
+        }
+
+        String[] parts = address.replace('،', ',').split(",", 3);
+
+        if (parts.length != 3) {
+            throw new IllegalArgumentException(
+                    "Address must include city, street or area, and building"
+            );
+        }
+
+        for (String part : parts) {
+            if (part.isBlank()) {
+                throw new IllegalArgumentException(
+                        "Address parts cannot be blank"
+                );
+            }
+        }
     }
 }

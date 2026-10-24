@@ -193,4 +193,16 @@ public class OrderServiceTest {
 
         verifyNoInteractions(orderRepository);
     }
+    @Test
+    void rejectsIncompleteAddressWithoutSaving() {
+        makeRestaurantAvailable();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> orderService.placeOrder(
+                        10, customer, 1, validItems(),
+                        "Nablus, Rafidia"
+                ));
+
+        verifyNoInteractions(orderRepository);
+    }
 }

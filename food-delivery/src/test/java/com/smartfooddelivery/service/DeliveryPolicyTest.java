@@ -129,4 +129,56 @@ void acceptsCityWithDifferentCaseAndExtraSpaces() {
 
     assertDoesNotThrow(() -> policy.validate(order));
 }
+    private Order createOrderWithAddress(String address) {
+        User customer = new User(1, "customer1", "hash", "Customer");
+        Restaurant restaurant =
+                new Restaurant(1, "Pizza House", "Nablus", true);
+        MenuItem item = new MenuItem(1, "Meal", 50.0, 1);
+
+        return new Order(
+                1, customer, restaurant,
+                List.of(new OrderItem(item, 1)),
+                address
+        );
+    }
+    @Test
+    void rejectsAddressWithoutBuilding() {
+        DeliveryPolicy policy =
+                new DeliveryPolicy(30.0, Set.of("Nablus"));
+        Order order = createOrderWithAddress("Nablus, Rafidia");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> policy.validate(order));
+    }
+
+    @Test
+    void rejectsAddressWithBlankArea() {
+        DeliveryPolicy policy =
+                new DeliveryPolicy(30.0, Set.of("Nablus"));
+        Order order = createOrderWithAddress("Nablus,   , Building 10");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> policy.validate(order));
+    }
+
+    @Test
+    void rejectsAddressWithBlankCity() {
+        DeliveryPolicy policy =
+                new DeliveryPolicy(30.0, Set.of("Nablus"));
+        Order order = createOrderWithAddress(", Rafidia, Building 10");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> policy.validate(order));
+    }
+
+    @Test
+    void acceptsAddressWithArabicCommas() {
+        DeliveryPolicy policy =
+                new DeliveryPolicy(30.0, Set.of("Nablus"));
+        Order order = createOrderWithAddress(
+                "Nablus، Rafidia، Building 10"
+        );
+
+        assertDoesNotThrow(() -> policy.validate(order));
+    }
 }
