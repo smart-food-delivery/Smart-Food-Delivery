@@ -3,6 +3,8 @@ package com.smartfooddelivery.model;
 import com.smartfooddelivery.domain.OrderStatus;
 
 import java.util.List;
+import com.smartfooddelivery.model.Driver;
+import com.smartfooddelivery.model.Order;
 
 public class Order {
 
@@ -12,6 +14,7 @@ public class Order {
     private final List<OrderItem> items;
     private final String deliveryAddress;
     private OrderStatus status;
+    private Driver assignedDriver;
 
     public Order(int id, User customer, Restaurant restaurant,
                  List<OrderItem> items, String deliveryAddress) {
@@ -44,6 +47,7 @@ public class Order {
         this.status = OrderStatus.PENDING;
     }
 
+
     public int getId() {
         return id;
     }
@@ -66,6 +70,25 @@ public class Order {
 
     public OrderStatus getStatus() {
         return status;
+    }
+
+    public void assignDriver(Driver driver) {
+
+        if (driver == null) {
+            throw new IllegalArgumentException("Driver is required");
+        }
+
+        if (assignedDriver != null) {
+            throw new IllegalStateException(
+                    "Order already has an assigned driver"
+            );
+        }
+
+        this.assignedDriver = driver;
+    }
+
+    public Driver getAssignedDriver() {
+        return assignedDriver;
     }
 
     public double getSubtotal() {
