@@ -10,6 +10,7 @@ import com.smartfooddelivery.repository.RestaurantRepository;
 
 import java.util.List;
 import java.util.Objects;
+import com.smartfooddelivery.domain.OrderStatus;
 
 public class OrderService {
 
@@ -87,4 +88,18 @@ public class OrderService {
 
         order.cancel();
     }
+
+
+    public void updateOrderStatus(int orderId, OrderStatus newStatus) {
+
+        Order order = orderRepository.findById(orderId);
+
+        if (order == null) {
+            throw new IllegalArgumentException("Order not found");
+        }
+
+        order.changeStatus(newStatus);
+    }
+
+
 }

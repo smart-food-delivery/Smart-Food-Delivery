@@ -402,5 +402,85 @@ public class OrderServiceTest {
         );
         verifyNoMoreInteractions(notificationService);
     }
+
+
+
+    @Test
+    void updatesOrderStatusSuccessfully() {
+        Order order = createPendingOrder();
+        when(orderRepository.findById(10)).thenReturn(order);
+
+        orderService.updateOrderStatus(10, OrderStatus.CONFIRMED);
+
+        assertEquals(OrderStatus.CONFIRMED, order.getStatus());
+        verify(orderRepository).findById(10);
+    }
+
+    @Test
+    void rejectsInvalidStatusTransition() {
+        Order order = createPendingOrder();
+        when(orderRepository.findById(10)).thenReturn(order);
+
+        assertThrows(IllegalStateException.class,
+                () -> orderService.updateOrderStatus(
+                        10, OrderStatus.DELIVERED));
+
+        assertEquals(OrderStatus.PENDING, order.getStatus());
+    }
+
+    @Test
+    void rejectsUpdatingUnknownOrder() {
+        when(orderRepository.findById(99)).thenReturn(null);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> orderService.updateOrderStatus(
+                        99, OrderStatus.CONFIRMED));
+    }
+
+    @Test
+    void rejectsNullOrderStatus() {
+        Order order = createPendingOrder();
+        when(orderRepository.findById(10)).thenReturn(order);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> orderService.updateOrderStatus(10, null));
+
+        assertEquals(OrderStatus.PENDING, order.getStatus());
+    }
+
+    @Test
+    void preventsChangesAfterDelivery() {
+        Order order = createPendingOrder();
+        when(orderRepository.findById(10)).thenReturn(order);
+
+        order.changeStatus(OrderStatus.CONFIRMED);
+        order.changeStatus(OrderStatus.PREPARING);
+        order.changeStatus(OrderStatus.READY);
+        order.changeStatus(OrderStatus.OUT_FOR_DELIVERY);
+        order.changeStatus(OrderStatus.DELIVERED);
+
+        assertThrows(IllegalStateException.class,
+                () -> orderService.updateOrderStatus(
+                        10, OrderStatus.CONFIRMED));
+
+        assertEquals(OrderStatus.DELIVERED, order.getStatus());
+    }
+
+    @Test
+    void doesNotNotifyWhenStatusTransitionIsInvalid() {
+        Order order = createPendingOrder();
+        order.addObserver(orderObserver);
+
+        when(orderRepository.findById(10)).thenReturn(order);
+
+        assertThrows(IllegalStateException.class,
+                () -> orderService.updateOrderStatus(
+                        10, OrderStatus.DELIVERED));
+
+        assertEquals(OrderStatus.PENDING, order.getStatus());
+        verifyNoInteractions(orderObserver);
+    }
+
+
 }
     
