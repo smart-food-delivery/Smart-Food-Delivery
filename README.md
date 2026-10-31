@@ -77,3 +77,62 @@ The order records its assigned driver and marks that driver unavailable
 before notifying observers. If email sending fails, the assignment remains
 in place and the driver remains busy. The notification exception is
 propagated to the caller; the assignment is not rolled back.
+
+
+## Pricing strategies — US4.3
+
+Orders use normal pricing by default:
+
+- Normal pricing: food subtotal + delivery fee.
+- Promotional pricing: applies a configurable percentage discount to
+  the food subtotal, then adds the full delivery fee.
+- Peak-hour pricing: applies a configurable percentage surcharge to
+  the delivery fee, then adds the food subtotal.
+
+These are implementation choices; the project requirements do not
+specify the discount or surcharge percentages.
+
+Pricing strategies can only be changed while an order is PENDING
+and unpaid. Delivery details follow the same restriction.
+
+Final totals are rounded to two decimal places using HALF_UP.
+Peak-hour pricing is selected explicitly; time-based selection is
+not automatic.
+
+Example, before confirming the order:
+
+```java
+order.setPricingStrategy(new PromotionalPricingStrategy(10.0));
+double total = order.getTotal();
+```
+
+## Cash payments — US4.4
+
+Cash payment is processed through OrderPaymentService using the
+order's final total, including pricing adjustments and delivery.
+
+Our cash-on-delivery rule allows payment while the order is
+OUT_FOR_DELIVERY, before it is marked DELIVERED.
+
+- New orders start with payment status UNPAID.
+- Successful payment changes the payment status to PAID.
+- Insufficient or invalid cash is rejected and leaves the order UNPAID.
+- Duplicate payments are rejected.
+- The service returns the customer's change.
+- Amounts must be finite, non-negative, and represent whole cents.
+- A zero-value bill is supported.
+
+Payment does not automatically change the delivery status.
+
+Example:
+
+```java
+OrderPaymentService payments = new OrderPaymentService(
+        orderRepository, new CashPaymentService()
+);
+
+double change = payments.payOrder(orderId, amountReceived);
+```
+
+Automated tests use a mocked PaymentService to check payment success
+and failure, and also test integration with the real CashPaymentService.
