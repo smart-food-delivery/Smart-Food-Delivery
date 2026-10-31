@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Send test email" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="com.smartfooddelivery.notification.EmailSmokeTest" />
+    <module name="food-delivery" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/food-delivery" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
