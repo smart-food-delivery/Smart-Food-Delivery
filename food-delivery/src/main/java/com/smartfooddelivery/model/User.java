@@ -5,12 +5,22 @@ public class User {
     private String username;
     private String passwordHash;
     private String role;
+    private String email;
 
     public User(int id, String username, String passwordHash, String role) {
+        this(id, username, passwordHash, role, null);
+    }
+
+    public User(int id, String username, String passwordHash, String role, String email) {
         this.id = id;
         this.username = username;
         this.passwordHash = passwordHash;
         this.role = role;
+        this.email = email;
+    }
+
+    public String getEmail() {
+        return email;
     }
 
     public int getId() {

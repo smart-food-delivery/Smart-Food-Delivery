@@ -4,6 +4,7 @@ import com.smartfooddelivery.model.Order;
 import com.smartfooddelivery.model.OrderItem;
 import com.smartfooddelivery.model.Restaurant;
 import com.smartfooddelivery.model.User;
+import com.smartfooddelivery.notification.OrderObserver;
 import com.smartfooddelivery.repository.OrderRepository;
 import com.smartfooddelivery.repository.RestaurantRepository;
 
@@ -15,20 +16,27 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final RestaurantRepository restaurantRepository;
     private final DeliveryPolicy deliveryPolicy;
+    private final OrderObserver orderObserver;
 
-    public OrderService(OrderRepository orderRepository,
-                        RestaurantRepository restaurantRepository,
-                        DeliveryPolicy deliveryPolicy) {
+    public OrderService(
+            OrderRepository orderRepository,
+            RestaurantRepository restaurantRepository,
+            DeliveryPolicy deliveryPolicy,
+            OrderObserver orderObserver) {
 
         this.orderRepository = Objects.requireNonNull(orderRepository);
         this.restaurantRepository =
                 Objects.requireNonNull(restaurantRepository);
         this.deliveryPolicy = Objects.requireNonNull(deliveryPolicy);
+        this.orderObserver = Objects.requireNonNull(orderObserver);
     }
 
-    public Order placeOrder(int orderId, User customer,
-                            int restaurantId, List<OrderItem> items,
-                            String deliveryAddress) {
+    public Order placeOrder(
+            int orderId,
+            User customer,
+            int restaurantId,
+            List<OrderItem> items,
+            String deliveryAddress) {
 
         Restaurant restaurant =
                 restaurantRepository.findById(restaurantId);
@@ -64,7 +72,9 @@ public class OrderService {
         }
 
         deliveryPolicy.validate(order);
+        order.addObserver(orderObserver);
         orderRepository.save(order);
+
         return order;
     }
 

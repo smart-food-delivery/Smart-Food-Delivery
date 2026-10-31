@@ -28,3 +28,6 @@ replay_pid*
 
 # Maven build output in all modules
 **/target/
+.env
+.env.*
+!.env.example
