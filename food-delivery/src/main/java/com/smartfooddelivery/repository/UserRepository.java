@@ -19,7 +19,7 @@ public class UserRepository {
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split(",", -1);
 
-                if (parts.length != 4) {
+                if (parts.length != 4 && parts.length != 5) {
                     continue;
                 }
                 if (parts[1].trim().equals(username)) {
@@ -34,7 +34,8 @@ public class UserRepository {
                             id,
                             parts[1].trim(),
                             parts[2].trim(),
-                            parts[3].trim()
+                            parts[3].trim(),
+                            parts.length == 5 ? parts[4].trim() : null
                     );
                 }
             }

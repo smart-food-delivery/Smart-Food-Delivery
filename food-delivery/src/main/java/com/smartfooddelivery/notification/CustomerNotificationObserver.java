@@ -10,6 +10,10 @@ public class CustomerNotificationObserver implements OrderObserver {
 
     private final NotificationService notificationService;
 
+    public static CustomerNotificationObserver fromEnvironment() {
+        return new CustomerNotificationObserver(EmailNotificationService.fromEnvironment());
+    }
+
     public CustomerNotificationObserver(
             NotificationService notificationService) {
 

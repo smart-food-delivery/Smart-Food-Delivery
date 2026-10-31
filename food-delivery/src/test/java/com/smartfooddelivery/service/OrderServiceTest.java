@@ -10,7 +10,14 @@ import com.smartfooddelivery.repository.OrderRepository;
 import com.smartfooddelivery.repository.RestaurantRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
+import com.smartfooddelivery.notification.OrderObserver;
+import com.smartfooddelivery.notification.CustomerNotificationObserver;
+import com.smartfooddelivery.notification.NotificationService;
+import static org.mockito.Mockito.mock;
+import com.smartfooddelivery.model.Driver;
+import com.smartfooddelivery.repository.DriverRepository;
+import com.smartfooddelivery.notification.CustomerNotificationObserver;
+import com.smartfooddelivery.notification.NotificationService;
 import java.util.Set;
 import java.util.List;
 
@@ -21,21 +28,26 @@ public class OrderServiceTest {
 
     private OrderRepository orderRepository;
     private RestaurantRepository restaurantRepository;
+    private OrderObserver orderObserver;
     private OrderService orderService;
     private User customer;
 
     @BeforeEach
     void setUp() {
-        orderRepository = mock(OrderRepository.class);
-        restaurantRepository = mock(RestaurantRepository.class);
+        this.orderRepository = mock(OrderRepository.class);
+        this.restaurantRepository = mock(RestaurantRepository.class);
+        this.orderObserver = mock(OrderObserver.class);
 
-        orderService = new OrderService(
-                orderRepository,
-                restaurantRepository,
-                new DeliveryPolicy(30.0, Set.of("Nablus"))
+        this.orderService = new OrderService(
+                this.orderRepository,
+                this.restaurantRepository,
+                new DeliveryPolicy(30.0, Set.of("Nablus")),
+                this.orderObserver
         );
 
-        customer = new User(1, "customer1", "hash", "Customer");
+        this.customer = new User(
+                1, "customer1", "hash", "Customer"
+        );
     }
 
     private void makeRestaurantAvailable() {
@@ -175,7 +187,7 @@ public class OrderServiceTest {
                 ));
 
         verifyNoInteractions(orderRepository);
-        
+
     }
     @Test
     void rejectsRestaurantOutsideDeliveryZoneWithoutSaving() {
@@ -248,6 +260,147 @@ public class OrderServiceTest {
                 () -> orderService.cancelOrder(10));
 
         assertEquals(OrderStatus.CANCELLED, order.getStatus());
+    }
+    @Test
+    void automaticallyNotifiesCustomerWhenCreatedOrderStatusChanges() {
+        makeRestaurantAvailable();
+
+        NotificationService notificationService =
+                mock(NotificationService.class);
+
+        CustomerNotificationObserver customerObserver =
+                new CustomerNotificationObserver(notificationService);
+
+        OrderService service = new OrderService(
+                orderRepository,
+                restaurantRepository,
+                new DeliveryPolicy(30.0, Set.of("Nablus")),
+                customerObserver
+        );
+
+        Order order = service.placeOrder(
+                10,
+                customer,
+                1,
+                validItems(),
+                "Nablus, Rafidia, Building 10"
+        );
+
+        verify(orderRepository).save(order);
+        verifyNoInteractions(notificationService);
+
+        order.changeStatus(OrderStatus.CONFIRMED);
+
+        assertEquals(OrderStatus.CONFIRMED, order.getStatus());
+
+        verify(notificationService).sendNotification(
+                customer,
+                "Order #10 status changed from PENDING to CONFIRMED."
+        );
+
+        verifyNoMoreInteractions(notificationService);
+    }
+    private Order placeOrderWithNotifications(
+            NotificationService notificationService) {
+
+        makeRestaurantAvailable();
+
+        CustomerNotificationObserver customerObserver =
+                new CustomerNotificationObserver(notificationService);
+
+        OrderService service = new OrderService(
+                orderRepository,
+                restaurantRepository,
+                new DeliveryPolicy(30.0, Set.of("Nablus")),
+                customerObserver
+        );
+
+        return service.placeOrder(
+                10,
+                customer,
+                1,
+                validItems(),
+                "Nablus, Rafidia, Building 10"
+        );
+    }
+
+    private void moveOrderToReady(Order order) {
+        order.changeStatus(OrderStatus.CONFIRMED);
+        order.changeStatus(OrderStatus.PREPARING);
+        order.changeStatus(OrderStatus.READY);
+    }
+
+    @Test
+    void notifiesCustomerWhenDriverIsAssignedThroughService() {
+        NotificationService notificationService =
+                mock(NotificationService.class);
+
+        Order order = placeOrderWithNotifications(notificationService);
+
+        Driver driver = new Driver(1, "Ahmad", true, 2.5, 4.8);
+        DriverRepository driverRepository = mock(DriverRepository.class);
+
+        when(orderRepository.findById(10)).thenReturn(order);
+        when(driverRepository.findById(1)).thenReturn(driver);
+
+        DriverService driverService = new DriverService(
+                driverRepository,
+                orderRepository
+        );
+
+        driverService.assignDriver(10, 1);
+
+        assertSame(driver, order.getAssignedDriver());
+        assertFalse(driver.isAvailable());
+
+        verify(notificationService).sendNotification(
+                customer,
+                "Driver Ahmad has been assigned to your order #10."
+        );
+        verifyNoMoreInteractions(notificationService);
+    }
+
+    @Test
+    void createdOrderNotifiesCustomerWhenOutForDelivery() {
+        NotificationService notificationService =
+                mock(NotificationService.class);
+
+        Order order = placeOrderWithNotifications(notificationService);
+        moveOrderToReady(order);
+
+        clearInvocations(notificationService);
+
+        order.changeStatus(OrderStatus.OUT_FOR_DELIVERY);
+
+        assertEquals(OrderStatus.OUT_FOR_DELIVERY, order.getStatus());
+
+        verify(notificationService).sendNotification(
+                customer,
+                "Order #10 status changed from READY to OUT_FOR_DELIVERY."
+        );
+        verifyNoMoreInteractions(notificationService);
+    }
+
+    @Test
+    void createdOrderNotifiesCustomerWhenDelivered() {
+        NotificationService notificationService =
+                mock(NotificationService.class);
+
+        Order order = placeOrderWithNotifications(notificationService);
+        moveOrderToReady(order);
+        order.changeStatus(OrderStatus.OUT_FOR_DELIVERY);
+
+        clearInvocations(notificationService);
+
+        order.changeStatus(OrderStatus.DELIVERED);
+
+        assertEquals(OrderStatus.DELIVERED, order.getStatus());
+
+        verify(notificationService).sendNotification(
+                customer,
+                "Order #10 status changed from OUT_FOR_DELIVERY to DELIVERED."
+        );
+        verifyNoMoreInteractions(notificationService);
     }
 }
     

@@ -1,12 +1,11 @@
 package com.smartfooddelivery.model;
 
 import com.smartfooddelivery.domain.OrderStatus;
+import com.smartfooddelivery.notification.OrderSubject;
 
 import java.util.List;
-import com.smartfooddelivery.model.Driver;
-import com.smartfooddelivery.model.Order;
 
-public class Order {
+public class Order extends OrderSubject {
 
     private final int id;
     private final User customer;
@@ -47,7 +46,6 @@ public class Order {
         this.status = OrderStatus.PENDING;
     }
 
-
     public int getId() {
         return id;
     }
@@ -73,7 +71,6 @@ public class Order {
     }
 
     public void assignDriver(Driver driver) {
-
         if (driver == null) {
             throw new IllegalArgumentException("Driver is required");
         }
@@ -85,6 +82,7 @@ public class Order {
         }
 
         this.assignedDriver = driver;
+        notifyDriverAssigned(this, driver);
     }
 
     public Driver getAssignedDriver() {
@@ -96,6 +94,7 @@ public class Order {
                 .mapToDouble(OrderItem::getSubtotal)
                 .sum();
     }
+
     public void cancel() {
         if (!status.canBeCancelled()) {
             throw new IllegalStateException(
@@ -103,8 +102,12 @@ public class Order {
             );
         }
 
+        OrderStatus oldStatus = status;
         status = OrderStatus.CANCELLED;
+
+        notifyStatusChanged(this, oldStatus, status);
     }
+
     public void changeStatus(OrderStatus newStatus) {
         if (newStatus == null) {
             throw new IllegalArgumentException("New status is required");
@@ -126,6 +129,9 @@ public class Order {
             );
         }
 
+        OrderStatus oldStatus = status;
         status = newStatus;
+
+        notifyStatusChanged(this, oldStatus, newStatus);
     }
 }
