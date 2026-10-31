@@ -16,6 +16,7 @@ import com.smartfooddelivery.service.OrderService;
 import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
+import com.smartfooddelivery.service.DeliveryCostService;
 
 public class OrderNotificationDemo {
 
@@ -35,27 +36,36 @@ public class OrderNotificationDemo {
         );
 
         OrderRepository orderRepository = new OrderRepository();
-
         OrderService orderService = new OrderService(
                 orderRepository,
                 new RestaurantRepository(),
                 new DeliveryPolicy(30.0, Set.of("Nablus")),
-                CustomerNotificationObserver.fromEnvironment()
+                CustomerNotificationObserver.fromEnvironment(),
+                new DeliveryCostService(2.0)
         );
 
         MenuItem pizza = new MenuItem(1, "Pizza", 25.0, 1);
 
-        Order order = orderService.placeOrder(
+
+        Order order = orderService.placeOrderWithDelivery(
                 10,
                 customer,
                 1,
                 List.of(new OrderItem(pizza, 2)),
-                "Nablus, Rafidia, Building 10"
+                "Nablus, Rafidia, Building 10",
+                5.0
         );
+
+
 
         System.out.println("Order ID: " + order.getId());
         System.out.println("Subtotal: " + order.getSubtotal());
+        System.out.println("Delivery distance: "
+                + order.getDeliveryDistanceKm() + " km");
+        System.out.println("Delivery fee: " + order.getDeliveryFee());
+        System.out.println("Final total: " + order.getTotal());
         System.out.println("Current status: " + order.getStatus());
+
 
         System.out.print(
                 "Type YES to confirm the order and send one real email: "

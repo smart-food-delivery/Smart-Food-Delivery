@@ -14,6 +14,8 @@ public class Order extends OrderSubject {
     private final String deliveryAddress;
     private OrderStatus status;
     private Driver assignedDriver;
+    private double deliveryDistanceKm;
+    private double deliveryFee;
 
     public Order(int id, User customer, Restaurant restaurant,
                  List<OrderItem> items, String deliveryAddress) {
@@ -140,4 +142,34 @@ public class Order extends OrderSubject {
 
         notifyStatusChanged(this, oldStatus, newStatus);
     }
+
+
+
+    public void setDeliveryDetails(double distanceKm, double fee) {
+        if (!Double.isFinite(distanceKm) || distanceKm < 0) {
+            throw new IllegalArgumentException("Invalid delivery distance");
+        }
+
+        if (!Double.isFinite(fee) || fee < 0) {
+            throw new IllegalArgumentException("Invalid delivery fee");
+        }
+
+        this.deliveryDistanceKm = distanceKm;
+        this.deliveryFee = fee;
+    }
+
+    public double getDeliveryDistanceKm() {
+        return deliveryDistanceKm;
+    }
+
+    public double getDeliveryFee() {
+        return deliveryFee;
+    }
+
+
+    public double getTotal() {
+        return Math.round((getSubtotal() + deliveryFee) * 100.0) / 100.0;
+    }
+
+
 }

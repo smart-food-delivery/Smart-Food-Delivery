@@ -482,5 +482,95 @@ public class OrderServiceTest {
     }
 
 
+    @Test
+    void calculatesDeliveryFeeWhenPlacingOrder() {
+        makeRestaurantAvailable();
+
+        DeliveryCostService costService = new DeliveryCostService(2.0);
+
+        OrderService service = new OrderService(
+                orderRepository,
+                restaurantRepository,
+                new DeliveryPolicy(30.0, Set.of("Nablus")),
+                orderObserver,
+                costService
+        );
+
+        Order order = service.placeOrderWithDelivery(
+                10,
+                customer,
+                1,
+                validItems(),
+                "Nablus, Rafidia, Building 10",
+                5.0
+        );
+
+        assertEquals(5.0, order.getDeliveryDistanceKm(), 0.001);
+        assertEquals(10.0, order.getDeliveryFee(), 0.001);
+        assertEquals(50.0, order.getSubtotal(), 0.001);
+        assertEquals(60.0, order.getTotal(), 0.001);
+    }
+
+    @Test
+    void savedOrderIncludesDeliveryFeeInFinalBill() {
+        makeRestaurantAvailable();
+
+        DeliveryCostService costService = new DeliveryCostService(2.0);
+
+        OrderService service = new OrderService(
+                orderRepository,
+                restaurantRepository,
+                new DeliveryPolicy(30.0, Set.of("Nablus")),
+                orderObserver,
+                costService
+        );
+
+        Order order = service.placeOrderWithDelivery(
+                10,
+                customer,
+                1,
+                validItems(),
+                "Nablus, Rafidia, Building 10",
+                5.0
+        );
+
+        verify(orderRepository).save(order);
+
+        when(orderRepository.findById(10)).thenReturn(order);
+
+        Order savedOrder = orderRepository.findById(10);
+
+        assertEquals(10.0, savedOrder.getDeliveryFee(), 0.001);
+        assertEquals(60.0, savedOrder.getTotal(), 0.001);
+    }
+
+    @Test
+    void rejectsNegativeDeliveryDistanceWithoutSavingOrder() {
+        makeRestaurantAvailable();
+
+        DeliveryCostService costService = new DeliveryCostService(2.0);
+
+        OrderService service = new OrderService(
+                orderRepository,
+                restaurantRepository,
+                new DeliveryPolicy(30.0, Set.of("Nablus")),
+                orderObserver,
+                costService
+        );
+
+        assertThrows(IllegalArgumentException.class,
+                () -> service.placeOrderWithDelivery(
+                        10,
+                        customer,
+                        1,
+                        validItems(),
+                        "Nablus, Rafidia, Building 10",
+                        -5.0
+                ));
+
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+
 }
     
