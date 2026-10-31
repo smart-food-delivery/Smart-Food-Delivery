@@ -1,6 +1,7 @@
 package com.smartfooddelivery.model;
 
 import com.smartfooddelivery.domain.OrderStatus;
+import com.smartfooddelivery.domain.PaymentStatus;
 import com.smartfooddelivery.notification.OrderSubject;
 import com.smartfooddelivery.strategy.NormalPricingStrategy;
 import com.smartfooddelivery.strategy.PricingStrategy;
@@ -14,12 +15,14 @@ public class Order extends OrderSubject {
     private final Restaurant restaurant;
     private final List<OrderItem> items;
     private final String deliveryAddress;
+
     private OrderStatus status;
     private Driver assignedDriver;
     private double deliveryDistanceKm;
     private double deliveryFee;
-    private PricingStrategy pricingStrategy = new NormalPricingStrategy();
 
+    private PricingStrategy pricingStrategy = new NormalPricingStrategy();
+    private PaymentStatus paymentStatus = PaymentStatus.UNPAID;
 
     public Order(int id, User customer, Restaurant restaurant,
                  List<OrderItem> items, String deliveryAddress) {
@@ -147,9 +150,14 @@ public class Order extends OrderSubject {
         notifyStatusChanged(this, oldStatus, newStatus);
     }
 
-
-
     public void setDeliveryDetails(double distanceKm, double fee) {
+        if (status != OrderStatus.PENDING
+                || paymentStatus == PaymentStatus.PAID) {
+            throw new IllegalStateException(
+                    "Delivery details can only change for unpaid pending orders"
+            );
+        }
+
         if (!Double.isFinite(distanceKm) || distanceKm < 0) {
             throw new IllegalArgumentException("Invalid delivery distance");
         }
@@ -170,7 +178,6 @@ public class Order extends OrderSubject {
         return deliveryFee;
     }
 
-
     public double getTotal() {
         return pricingStrategy.calculateTotal(getSubtotal(), deliveryFee);
     }
@@ -180,14 +187,34 @@ public class Order extends OrderSubject {
             throw new IllegalArgumentException("Pricing strategy is required");
         }
 
-        if (status != OrderStatus.PENDING) {
+        if (status != OrderStatus.PENDING
+                || paymentStatus == PaymentStatus.PAID) {
             throw new IllegalStateException(
-                    "Pricing can only be changed for pending orders"
+                    "Pricing can only change for unpaid pending orders"
             );
         }
 
         this.pricingStrategy = pricingStrategy;
     }
 
+    public PaymentStatus getPaymentStatus() {
+        return paymentStatus;
+    }
 
+    public void validatePaymentAllowed() {
+        if (paymentStatus == PaymentStatus.PAID) {
+            throw new IllegalStateException("Order has already been paid");
+        }
+
+        if (status != OrderStatus.OUT_FOR_DELIVERY) {
+            throw new IllegalStateException(
+                    "Cash payment is only allowed while out for delivery"
+            );
+        }
+    }
+
+    public void markAsPaid() {
+        validatePaymentAllowed();
+        paymentStatus = PaymentStatus.PAID;
+    }
 }
