@@ -2,6 +2,8 @@ package com.smartfooddelivery.model;
 
 import com.smartfooddelivery.domain.OrderStatus;
 import com.smartfooddelivery.notification.OrderSubject;
+import com.smartfooddelivery.strategy.NormalPricingStrategy;
+import com.smartfooddelivery.strategy.PricingStrategy;
 
 import java.util.List;
 
@@ -16,6 +18,8 @@ public class Order extends OrderSubject {
     private Driver assignedDriver;
     private double deliveryDistanceKm;
     private double deliveryFee;
+    private PricingStrategy pricingStrategy = new NormalPricingStrategy();
+
 
     public Order(int id, User customer, Restaurant restaurant,
                  List<OrderItem> items, String deliveryAddress) {
@@ -168,7 +172,21 @@ public class Order extends OrderSubject {
 
 
     public double getTotal() {
-        return Math.round((getSubtotal() + deliveryFee) * 100.0) / 100.0;
+        return pricingStrategy.calculateTotal(getSubtotal(), deliveryFee);
+    }
+
+    public void setPricingStrategy(PricingStrategy pricingStrategy) {
+        if (pricingStrategy == null) {
+            throw new IllegalArgumentException("Pricing strategy is required");
+        }
+
+        if (status != OrderStatus.PENDING) {
+            throw new IllegalStateException(
+                    "Pricing can only be changed for pending orders"
+            );
+        }
+
+        this.pricingStrategy = pricingStrategy;
     }
 
 
