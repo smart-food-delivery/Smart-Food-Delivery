@@ -81,7 +81,13 @@ public class Order extends OrderSubject {
             );
         }
 
+        if (!driver.isAvailable()) {
+            throw new IllegalStateException("Driver is not available");
+        }
+
         this.assignedDriver = driver;
+        driver.setAvailable(false);
+
         notifyDriverAssigned(this, driver);
     }
 
