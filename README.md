@@ -16,8 +16,13 @@ OrderService orders = new OrderService(
         CustomerNotificationObserver.fromEnvironment());
 ```
 
-Orders placed through that service notify the customer on subsequent status changes and driver assignments. Existing injected observers still work. This repository is a service library without an application entry point; the application must use the wiring above.
+Orders placed through that service notify the customer on subsequent status changes and driver assignments.
 
+The project currently provides service classes and two manual console entry points:
+- `EmailSmokeTest`: sends one real test email.
+- `OrderNotificationDemo`: demonstrates order confirmation, driver assignment, and delivery status notifications.
+
+A complete customer-facing application is not implemented yet.
 Build and run automated tests (these do not send real mail):
 
 ```powershell
@@ -34,3 +39,41 @@ java -cp "target/classes;target/dependency/*" com.smartfooddelivery.notification
 Successful execution means the SMTP server accepted the message; check the inbox/spam folder for delivery. Sending is synchronous with 10-second socket timeouts. Failures throw an exception; an order's in-memory state may already have changed before notification fails. Do not blindly repeat an order action to retry an email. There is no automatic retry or delivery queue.
 
 Implementation uses [Eclipse Angus Mail](https://eclipse-ee4j.github.io/angus-mail/) and [dotenv-java](https://github.com/cdimascio/dotenv-java).
+## Build, tests, and coverage
+
+From the repository root (`software`), run:
+
+```powershell
+mvn -f food-delivery/pom.xml clean verify
+```
+
+The JaCoCo coverage report is generated at:
+
+```text
+food-delivery/target/site/jacoco/index.html
+```
+
+Automated email tests use mocks and do not send real emails.
+Manual runs are not included in this Maven coverage report.
+
+## Manual order notification demo
+
+In IntelliJ, run:
+
+```text
+com.smartfooddelivery.notification.OrderNotificationDemo
+```
+
+Set the working directory to the `food-delivery` folder containing `.env`,
+or provide the SMTP settings through the run configuration's environment variables.
+
+Enter your own email address and type `YES` at both confirmation prompts.
+A successful complete run sends six notifications:
+confirmation, driver assignment, preparing, ready, out for delivery, and delivered.
+
+## Driver assignment and notification failure
+
+The order records its assigned driver and marks that driver unavailable
+before notifying observers. If email sending fails, the assignment remains
+in place and the driver remains busy. The notification exception is
+propagated to the caller; the assignment is not rolled back.
