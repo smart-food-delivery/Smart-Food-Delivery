@@ -101,7 +101,7 @@ not automatic.
 
 Example, before confirming the order:
 
-```java
+```text
 order.setPricingStrategy(new PromotionalPricingStrategy(10.0));
 double total = order.getTotal();
 ```
@@ -136,3 +136,22 @@ double change = payments.payOrder(orderId, amountReceived);
 
 Automated tests use a mocked PaymentService to check payment success
 and failure, and also test integration with the real CashPaymentService.
+
+
+## Order types — US5.1 and US5.2
+
+- StandardOrder uses the existing pricing and delivery policies.
+- ExpressOrder adds a configured positive fixed fee after the pricing
+  strategy calculates the total. This extra fee is not discounted
+  or increased by peak-hour pricing.
+- ScheduledOrder requires a delivery time strictly in the future
+  at creation. An injected Clock makes time validation testable.
+  It does not automatically dispatch orders at the scheduled time.
+
+OrderService supports creating all three types. Restaurant availability,
+item availability, restaurant ownership, minimum subtotal, delivery zone,
+and address validation apply to every type.
+
+Tests cover type-specific rules, totals, service creation, and rejection
+of invalid orders without saving them. Automated tests use a mocked Clock
+and observer; they do not send real emails.
