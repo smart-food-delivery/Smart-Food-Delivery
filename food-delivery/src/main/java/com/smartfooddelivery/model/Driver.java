@@ -59,4 +59,9 @@ public class Driver {
     }
 
 
+
+    public boolean canDeliver(Order order) {
+        return order != null;
+    }
+
 }
