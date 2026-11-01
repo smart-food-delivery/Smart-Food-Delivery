@@ -1,16 +1,22 @@
 package com.smartfooddelivery.service;
 
+import com.smartfooddelivery.domain.OrderStatus;
+import com.smartfooddelivery.model.ExpressOrder;
 import com.smartfooddelivery.model.Order;
 import com.smartfooddelivery.model.OrderItem;
 import com.smartfooddelivery.model.Restaurant;
+import com.smartfooddelivery.model.ScheduledOrder;
+import com.smartfooddelivery.model.StandardOrder;
 import com.smartfooddelivery.model.User;
 import com.smartfooddelivery.notification.OrderObserver;
 import com.smartfooddelivery.repository.OrderRepository;
 import com.smartfooddelivery.repository.RestaurantRepository;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
-import com.smartfooddelivery.domain.OrderStatus;
+import java.util.function.Function;
 
 public class OrderService {
 
@@ -42,19 +48,16 @@ public class OrderService {
             DeliveryCostService deliveryCostService) {
 
         this.orderRepository = Objects.requireNonNull(orderRepository);
-        this.restaurantRepository = Objects.requireNonNull(restaurantRepository);
+        this.restaurantRepository =
+                Objects.requireNonNull(restaurantRepository);
         this.deliveryPolicy = Objects.requireNonNull(deliveryPolicy);
         this.orderObserver = Objects.requireNonNull(orderObserver);
         this.deliveryCostService = Objects.requireNonNull(deliveryCostService);
     }
 
-
     private Order buildValidatedOrder(
-            int orderId,
-            User customer,
             int restaurantId,
-            List<OrderItem> items,
-            String deliveryAddress) {
+            Function<Restaurant, Order> orderFactory) {
 
         Restaurant restaurant =
                 restaurantRepository.findById(restaurantId);
@@ -67,13 +70,7 @@ public class OrderService {
             throw new IllegalArgumentException("Restaurant is closed");
         }
 
-        Order order = new Order(
-                orderId,
-                customer,
-                restaurant,
-                items,
-                deliveryAddress
-        );
+        Order order = orderFactory.apply(restaurant);
 
         for (OrderItem item : order.getItems()) {
             if (!item.getMenuItem().isAvailable()) {
@@ -92,10 +89,35 @@ public class OrderService {
         deliveryPolicy.validate(order);
         order.addObserver(orderObserver);
 
-
         return order;
     }
 
+    private Order placeWithDelivery(
+            int restaurantId,
+            double distanceKm,
+            Function<Restaurant, Order> orderFactory) {
+
+        if (deliveryCostService == null) {
+            throw new IllegalStateException(
+                    "Delivery cost service is not configured"
+            );
+        }
+
+        double fee = deliveryCostService.calculateDeliveryFee(distanceKm);
+
+        Order order = buildValidatedOrder(restaurantId, orderFactory);
+        order.setDeliveryDetails(distanceKm, fee);
+
+        // Validate the final total before saving any order type.
+        double total = order.getTotal();
+
+        if (!Double.isFinite(total) || total < 0) {
+            throw new IllegalArgumentException("Invalid order total");
+        }
+
+        orderRepository.save(order);
+        return order;
+    }
 
     public Order placeOrder(
             int orderId,
@@ -105,18 +127,88 @@ public class OrderService {
             String deliveryAddress) {
 
         Order order = buildValidatedOrder(
-                orderId,
-                customer,
                 restaurantId,
-                items,
-                deliveryAddress
+                restaurant -> new StandardOrder(
+                        orderId,
+                        customer,
+                        restaurant,
+                        items,
+                        deliveryAddress
+                )
         );
 
         orderRepository.save(order);
-
         return order;
     }
 
+    public Order placeOrderWithDelivery(
+            int orderId,
+            User customer,
+            int restaurantId,
+            List<OrderItem> items,
+            String deliveryAddress,
+            double distanceKm) {
+
+        return placeWithDelivery(
+                restaurantId,
+                distanceKm,
+                restaurant -> new StandardOrder(
+                        orderId,
+                        customer,
+                        restaurant,
+                        items,
+                        deliveryAddress
+                )
+        );
+    }
+
+    public Order placeExpressOrder(
+            int orderId,
+            User customer,
+            int restaurantId,
+            List<OrderItem> items,
+            String deliveryAddress,
+            double distanceKm,
+            double expressFee) {
+
+        return placeWithDelivery(
+                restaurantId,
+                distanceKm,
+                restaurant -> new ExpressOrder(
+                        orderId,
+                        customer,
+                        restaurant,
+                        items,
+                        deliveryAddress,
+                        expressFee
+                )
+        );
+    }
+
+    public Order placeScheduledOrder(
+            int orderId,
+            User customer,
+            int restaurantId,
+            List<OrderItem> items,
+            String deliveryAddress,
+            double distanceKm,
+            Instant scheduledDeliveryTime,
+            Clock clock) {
+
+        return placeWithDelivery(
+                restaurantId,
+                distanceKm,
+                restaurant -> new ScheduledOrder(
+                        orderId,
+                        customer,
+                        restaurant,
+                        items,
+                        deliveryAddress,
+                        scheduledDeliveryTime,
+                        clock
+                )
+        );
+    }
 
     public void cancelOrder(int orderId) {
         Order order = orderRepository.findById(orderId);
@@ -128,9 +220,7 @@ public class OrderService {
         order.cancel();
     }
 
-
     public void updateOrderStatus(int orderId, OrderStatus newStatus) {
-
         Order order = orderRepository.findById(orderId);
 
         if (order == null) {
@@ -139,52 +229,4 @@ public class OrderService {
 
         order.changeStatus(newStatus);
     }
-
-
-    /**
-     * Places an order with a delivery fee calculated
-     * from the delivery distance.
-     *
-     * @param orderId order identifier
-     * @param customer customer placing the order
-     * @param restaurantId selected restaurant
-     * @param items ordered items
-     * @param deliveryAddress delivery destination
-     * @param distanceKm delivery distance in kilometers
-     * @return created order including delivery fee
-     */
-    public Order placeOrderWithDelivery(
-            int orderId,
-            User customer,
-            int restaurantId,
-            List<OrderItem> items,
-            String deliveryAddress,
-            double distanceKm) {
-
-        if (deliveryCostService == null) {
-            throw new IllegalStateException(
-                    "Delivery cost service is not configured"
-            );
-        }
-
-        double fee = deliveryCostService.calculateDeliveryFee(distanceKm);
-
-
-        Order order = buildValidatedOrder(
-                orderId,
-                customer,
-                restaurantId,
-                items,
-                deliveryAddress
-        );
-
-        order.setDeliveryDetails(distanceKm, fee);
-
-        orderRepository.save(order);
-
-        return order;
-
-    }
-
-
 }
