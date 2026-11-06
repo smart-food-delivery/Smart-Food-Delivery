@@ -10,10 +10,31 @@ import com.smartfooddelivery.strategy.DriverSelectionStrategy;
 
 import java.util.List;
 
+/**
+ * Handles assigning drivers to delivery orders.
+ * Supports manual and automatic driver assignment.
+ */
+
 public class DriverService {
 
+    /**
+     * Stores the driver repository.
+     */
+
     private final DriverRepository driverRepository;
+
+    /**
+     * Stores the order repository.
+     */
+
     private final OrderRepository orderRepository;
+
+    /**
+     * Creates a DriverService using the given repositories.
+     *
+     * @param driverRepository repository for drivers
+     * @param orderRepository repository for orders
+     */
 
     public DriverService(
             DriverRepository driverRepository,
@@ -22,6 +43,16 @@ public class DriverService {
         this.driverRepository = driverRepository;
         this.orderRepository = orderRepository;
     }
+
+    /**
+     * Assigns a driver to an order after checking if the driver
+     * is available and can deliver the order.
+     *
+     * @param orderId the ID of the order
+     * @param driverId the ID of the driver
+     * @throws IllegalArgumentException if the order or driver is not found
+     * @throws IllegalStateException if the driver cannot be assigned
+     */
 
     public void assignDriver(int orderId, int driverId) {
 
@@ -56,6 +87,15 @@ public class DriverService {
         // Also supports tests that use mocked orders
         driver.setAvailable(false);
     }
+
+    /**
+     * Automatically assigns a driver to an order using a selection strategy.
+     *
+     * @param orderId the ID of the order
+     * @param strategy the strategy used to select a driver
+     * @throws IllegalArgumentException if the order or strategy is invalid
+     * @throws IllegalStateException if no suitable driver is available
+     */
 
     public void assignDriverAutomatically(
             int orderId,
@@ -98,6 +138,12 @@ public class DriverService {
 
         assignDriver(orderId, selectedDriver.getId());
     }
+    /**
+     * Checks if a driver can be assigned based on the order status.
+     *
+     * @param order the order to check
+     * @throws IllegalStateException if the order status does not allow driver assignment
+     */
 
     private void validateOrderStatus(Order order) {
 
